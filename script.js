@@ -111,15 +111,24 @@ function createBlock(text, type, id) {
     block.dataset.id = id;
     block.dataset.type = type;
 
+    // Append first to get dimensions
+    playArea.appendChild(block);
+    activeBlocks.push(block);
+
     // Random position with better distribution
-    const padding = 50;
-    const headerHeight = 100;
-    const maxX = window.innerWidth - 200 - padding;
-    const maxY = window.innerHeight - 100 - padding;
+    const padding = 20; // Reduced padding
+    const headerHeight = 60; // Reduced header height assumption
+
+    // Ensure we have valid ranges even on small screens
+    const maxX = Math.max(padding, window.innerWidth - block.offsetWidth - padding);
+    const maxY = Math.max(headerHeight + padding, window.innerHeight - block.offsetHeight - padding);
     const minY = headerHeight + padding;
 
+    // If screen is too small, maxY might be less than minY. Handle this.
+    const safeMaxY = Math.max(minY, maxY);
+
     const x = Math.random() * (maxX - padding) + padding;
-    const y = Math.random() * (maxY - minY) + minY;
+    const y = Math.random() * (safeMaxY - minY) + minY;
 
     block.style.left = `${x}px`;
     block.style.top = `${y}px`;
@@ -132,9 +141,6 @@ function createBlock(text, type, id) {
         if (block.dataset.isDragging === 'true') return;
         handleBlockClick(block);
     });
-
-    playArea.appendChild(block);
-    activeBlocks.push(block);
 }
 
 function handleBlockClick(block) {
