@@ -65,6 +65,89 @@ function startLevel() {
         timeBonus = 60;
     }
 
+    timeLeft = timeBonus;
+    scoreDisplay.textContent = score;
+    timerDisplay.textContent = timeLeft;
+
+    showScreen(gameScreen);
+
+    // Ensure layout is ready before generating blocks
+    // Double requestAnimationFrame ensures we are in the next paint frame
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            generateBlocks(pairsCount);
+        });
+    });
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+}
+
+function showScreen(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    screen.classList.add('active');
+}
+
+function updateTimer() {
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+    if (timeLeft <= 0) {
+        endGame();
+    }
+}
+
+function endGame() {
+    clearInterval(timerInterval);
+    finalScoreDisplay.textContent = score;
+    showScreen(resultScreen);
+}
+
+function generateBlocks(count) {
+    playArea.innerHTML = '';
+    activeBlocks = [];
+
+    // Pick random terms for the round
+    const shuffledTerms = [...termsData].sort(() => 0.5 - Math.random()).slice(0, count);
+
+    shuffledTerms.forEach(item => {
+        createBlock(item.term, 'term', item.id);
+        createBlock(item.definition, 'def', item.id);
+    });
+}
+
+let selectedBlock = null;
+
+function createBlock(text, type, id) {
+    const block = document.createElement('div');
+    block.classList.add('block', type);
+    block.textContent = text;
+    block.dataset.id = id;
+    block.dataset.type = type;
+
+    // Append first to get dimensions
+    playArea.appendChild(block);
+    activeBlocks.push(block);
+
+    // Random position with better distribution
+    const padding = 20; // Reduced padding
+    const headerHeight = 60; // Reduced header height assumption
+
+    // Get dimensions with fallback
+    let blockWidth = block.offsetWidth;
+    let blockHeight = block.offsetHeight;
+
+    // If dimensions are 0 (layout failed), force default size
+    if (blockWidth === 0 || blockHeight === 0) {
+        blockWidth = 150;
+        blockHeight = 60;
+        block.style.width = `${blockWidth}px`;
+        block.style.height = `${blockHeight}px`;
+    }
+
+    // Ensure we have valid ranges even on small screens
+    const maxX = Math.max(padding, window.innerWidth - blockWidth - padding);
+    const maxY = Math.max(headerHeight + padding, window.innerHeight - blockHeight - padding);
+    const minY = headerHeight + padding;
 
     // If screen is too small, maxY might be less than minY. Handle this.
     const safeMaxY = Math.max(minY, maxY);
