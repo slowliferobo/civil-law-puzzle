@@ -39,6 +39,9 @@ let maxLevels = 3;
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('retry-btn').addEventListener('click', startGame);
+document.getElementById('ignore-rotate-btn').addEventListener('click', () => {
+    document.getElementById('rotate-message').style.display = 'none';
+});
 
 function startGame() {
     score = 0;
