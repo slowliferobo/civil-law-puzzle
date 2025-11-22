@@ -1,15 +1,33 @@
+# Development artifacts (local only)
 *.zip
 __pycache__/
 *.pyc
 .DS_Store
-*.md
-!README.md
-!AI_Standard_Guide.md
-!Troubleshooting_Template.md
-!AI_Game_Dev_Master_Guide.md
-!Prompt_Template_*.md
-!精度向上参考/*.md
-!*.md
+
+# Development process files (templates, planning docs)
+1.*.md
+2.*.md
+3.*.md
+4.*.md
+5.*.md
+6.*.md
+7.*.md
+8.*.md
+9.*.md
+*_テンプレート.md
+ゲーム*.md
+民法見出し抽出.md
+*_game_ideas.md
+精度向上参考/
+
+# Temporary files
 *.txt
 *.py
-民法パズル/
+
+# Keep these documentation files
+!README.md
+!CHANGELOG.md
+!AI_Game_Dev_Master_Guide.md
+!AI_Standard_Guide.md
+!Troubleshooting_Template.md
+!Prompt_Template_*.md
