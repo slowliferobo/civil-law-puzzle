@@ -4,6 +4,12 @@ __pycache__/
 .DS_Store
 *.md
 !README.md
+!AI_Standard_Guide.md
+!Troubleshooting_Template.md
+!AI_Game_Dev_Master_Guide.md
+!Prompt_Template_*.md
+!精度向上参考/*.md
+!*.md
 *.txt
 *.py
 民法パズル/

@@ -3,30 +3,33 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>民法マスター：条文パズル</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4a90e2">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMWJ0QBNEH"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
-
-        gtag('config', 'G-YMWJ0QBNEH');
+        gtag('config', 'G-XXXXXXXXXX');
     </script>
 </head>
 
 <body>
-    <div id="game-container">
-        <div id="rotate-message">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">↻</div>
-            <p>スマホの<strong>自動回転</strong>をONにして<br>画面を横にしてください</p>
+    <div id="rotate-message">
+        <div>
+            <p>スマホは横画面で遊んでね！</p>
             <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">(PCの場合はウィンドウを広げてください)</p>
             <button id="ignore-rotate-btn" class="btn secondary"
                 style="font-size: 1rem; padding: 0.5rem 1rem; margin-top: 1rem;">そのまま遊ぶ</button>
         </div>
+    </div>
+
+    <div id="game-container">
         <div id="title-screen" class="screen active">
             <h1>民法マスター<br><span class="subtitle">条文パズル</span></h1>
             <div class="instructions">
@@ -39,20 +42,22 @@
 
         <div id="game-screen" class="screen">
             <div id="hud">
-                <div id="score-container">Score: <span id="score">0</span></div>
-                <div id="timer-container">Time: <span id="timer">60</span></div>
+                <div id="timer-container">残り時間: <span id="timer">60</span></div>
+                <div id="score-container">スコア: <span id="score">0</span></div>
             </div>
             <div id="play-area">
                 <!-- Blocks will be generated here -->
             </div>
+            <canvas id="effects-canvas"></canvas>
         </div>
 
         <div id="result-screen" class="screen">
-            <h2>終了！</h2>
-            <p>あなたのスコア: <span id="final-score">0</span></p>
-            <button id="retry-btn" class="btn secondary">もう一度</button>
+            <h1>終了！</h1>
+            <p class="subtitle">最終スコア: <span id="final-score">0</span></p>
+            <button id="retry-btn" class="btn primary">もう一度</button>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 

@@ -1,0 +1,21 @@
+{
+    "name": "民法マスター：条文パズル",
+    "short_name": "民法マスター",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#f0f4f8",
+    "theme_color": "#4a90e2",
+    "orientation": "landscape",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

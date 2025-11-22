@@ -1,3 +1,106 @@
+const CONFIG = {
+    DEBUG_MODE: false, // Set to false for release
+    GAME: {
+        INITIAL_TIME: 60,
+        LEVEL_COUNT: 3,
+        LEVEL_SETTINGS: [
+            { pairs: 3, timeBonus: 30 },
+            { pairs: 5, timeBonus: 45 },
+            { pairs: 8, timeBonus: 60 }
+        ],
+        PENALTY_TIME: 5,   // Risk: -5 seconds for wrong match
+        REWARD_TIME: 3,    // Return: +3 seconds for correct match
+        SCORE_MATCH: 100,
+        COMBO_WINDOW: 3000, // ms
+        COMBO_MULTIPLIER: [1.0, 1.2, 1.5, 2.0] // x1, x1.2, x1.5, x2.0
+    },
+    UI: {
+        ERROR_SHAKE_DURATION: 400,
+        MATCH_DELAY: 500
+    }
+};
+
+// --- Audio System (Web Audio API) ---
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+const SOUNDS = {
+    BGM: null, // Placeholder
+    SE_SELECT: { type: 'sine', freq: 880, duration: 0.1 },
+    SE_MATCH: { type: 'sine', freq: [1100, 1760], duration: 0.2 }, // High pitch
+    SE_ERROR: { type: 'sawtooth', freq: 150, duration: 0.3 }, // Low buzz
+    SE_CLEAR: { type: 'square', freq: [523, 659, 783, 1046], duration: 0.5 } // Fanfare
+};
+
+function playSound(name) {
+    if (!audioCtx) initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const sound = SOUNDS[name];
+    if (!sound) return;
+
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = sound.type;
+
+        // Simple frequency handling
+        if (Array.isArray(sound.freq)) {
+            osc.frequency.setValueAtTime(sound.freq[0], audioCtx.currentTime);
+            sound.freq.forEach((f, i) => {
+                if (i > 0) osc.frequency.setValueAtTime(f, audioCtx.currentTime + i * 0.1);
+            });
+        } else {
+            osc.frequency.setValueAtTime(sound.freq, audioCtx.currentTime);
+        }
+
+        // Use linear ramp for better compatibility
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01); // Attack
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + sound.duration); // Decay
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + sound.duration);
+    } catch (e) {
+        console.error("Audio playback failed:", e);
+    }
+}
+
+// Unlock AudioContext on first user interaction
+function unlockAudio() {
+    initAudio();
+    // Try to play a silent buffer to force the audio engine to wake up
+    try {
+        const buffer = audioCtx.createBuffer(1, 1, 22050);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start(0);
+        console.log("Audio warmed up");
+    } catch (e) {
+        console.error("Audio warmup failed", e);
+    }
+
+    document.removeEventListener('click', unlockAudio);
+    document.removeEventListener('touchstart', unlockAudio);
+    document.removeEventListener('keydown', unlockAudio);
+}
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio);
+document.addEventListener('keydown', unlockAudio);
+
 const termsData = [
     { id: 1, term: "善意", definition: "ある事情を知らないこと" },
     { id: 2, term: "悪意", definition: "ある事情を知っていること" },
@@ -31,11 +134,14 @@ const timerDisplay = document.getElementById('timer');
 const finalScoreDisplay = document.getElementById('final-score');
 
 let score = 0;
-let timeLeft = 60;
+let timeLeft = CONFIG.GAME.INITIAL_TIME;
 let timerInterval;
 let activeBlocks = [];
 let currentLevel = 1;
-let maxLevels = 3;
+let maxLevels = CONFIG.GAME.LEVEL_COUNT;
+let lastMatchTime = 0;
+let comboCount = 0;
+let isInvincible = false; // Debug feature
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('retry-btn').addEventListener('click', startGame);
@@ -46,7 +152,37 @@ if (ignoreBtn) {
     });
 }
 
+// --- Debug Features ---
+document.addEventListener('keydown', (e) => {
+    if (!CONFIG.DEBUG_MODE) return;
+
+    switch (e.key.toLowerCase()) {
+        case 't': // Time manipulation
+            timeLeft += 10;
+            updateTimerDisplay();
+            console.log("Debug: +10s");
+            break;
+        case 'w': // Warp / Win
+            levelClear();
+            console.log("Debug: Instant Level Clear");
+            break;
+        case 'i': // Invincibility
+            isInvincible = !isInvincible;
+            console.log(`Debug: Invincibility ${isInvincible ? 'ON' : 'OFF'}`);
+            document.getElementById('hud').style.color = isInvincible ? 'red' : 'black';
+            break;
+    }
+});
+
 function startGame() {
+    // Ensure audio context is resumed on user gesture
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    // Play start sound for feedback
+    playSound('SE_SELECT');
+
     score = 0;
     currentLevel = 1;
     startLevel();
@@ -58,21 +194,14 @@ function startGame() {
 }
 
 function startLevel() {
-    // Level settings
-    let pairsCount = 3;
-    let timeBonus = 30;
-
-    if (currentLevel === 2) {
-        pairsCount = 5;
-        timeBonus = 45;
-    } else if (currentLevel === 3) {
-        pairsCount = 8;
-        timeBonus = 60;
-    }
+    // Level settings from CONFIG
+    const settings = CONFIG.GAME.LEVEL_SETTINGS[currentLevel - 1] || CONFIG.GAME.LEVEL_SETTINGS[CONFIG.GAME.LEVEL_SETTINGS.length - 1];
+    let pairsCount = settings.pairs;
+    let timeBonus = settings.timeBonus;
 
     timeLeft = timeBonus;
     scoreDisplay.textContent = score;
-    timerDisplay.textContent = timeLeft;
+    updateTimerDisplay();
 
     showScreen(gameScreen);
 
@@ -102,7 +231,7 @@ function showScreen(screen) {
 
 function updateTimer() {
     timeLeft--;
-    timerDisplay.textContent = timeLeft;
+    updateTimerDisplay();
     if (timeLeft <= 0) {
         endGame();
     }
@@ -224,6 +353,7 @@ function createBlock(text, type, id) {
     block.addEventListener('click', (e) => {
         // Prevent click if it was a drag
         if (block.dataset.isDragging === 'true') return;
+        playSound('SE_SELECT');
         handleBlockClick(block);
     });
 }
@@ -257,16 +387,30 @@ function handleBlockClick(block) {
             selectedBlock = null;
         } else {
             // Wrong match
-            block.classList.add('error');
-            firstBlock.classList.add('error');
-            setTimeout(() => {
-                block.classList.remove('error');
-                firstBlock.classList.remove('error');
-                firstBlock.classList.remove('selected');
-                selectedBlock = null;
-            }, 400);
+            handleMismatch(firstBlock, block);
+            selectedBlock = null;
         }
     }
+}
+
+function handleMismatch(block1, block2) {
+    playSound('SE_ERROR');
+
+    // Risk: Penalty
+    if (!isInvincible) {
+        timeLeft -= CONFIG.GAME.PENALTY_TIME;
+        updateTimerDisplay();
+        triggerVisualPenalty();
+    }
+
+    block1.classList.add('error');
+    block2.classList.add('error');
+    setTimeout(() => {
+        block1.classList.remove('error');
+        block2.classList.remove('error');
+        block1.classList.remove('selected');
+        block2.classList.remove('selected');
+    }, CONFIG.UI.ERROR_SHAKE_DURATION);
 }
 
 function makeDraggable(element) {
@@ -349,8 +493,11 @@ function checkCollision(draggedBlock) {
     const targets = document.querySelectorAll(`.block.${targetType}`);
 
     let matched = false;
+    let wrongTarget = null;
 
     targets.forEach(target => {
+        if (matched) return;
+
         const targetRect = target.getBoundingClientRect();
 
         if (isOverlapping(draggedRect, targetRect)) {
@@ -358,12 +505,14 @@ function checkCollision(draggedBlock) {
                 // Match!
                 handleMatch(draggedBlock, target);
                 matched = true;
+            } else {
+                wrongTarget = target;
             }
         }
     });
 
-    if (!matched) {
-        // Optional: Add "wrong" animation or sound here
+    if (!matched && wrongTarget) {
+        handleMismatch(draggedBlock, wrongTarget);
     }
 }
 
@@ -374,9 +523,102 @@ function isOverlapping(rect1, rect2) {
         rect1.top > rect2.bottom);
 }
 
+// --- Particle System ---
+const canvas = document.getElementById('effects-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = Math.random() * 5 + 2;
+        this.speedX = Math.random() * 6 - 3;
+        this.speedY = Math.random() * 6 - 3;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.02 + 0.01;
+    }
+
+    update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.life -= this.decay;
+        this.size *= 0.95;
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+function createExplosion(x, y, color) {
+    for (let i = 0; i < 20; i++) {
+        particles.push(new Particle(x, y, color));
+    }
+}
+
+function updateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+    requestAnimationFrame(updateParticles);
+}
+updateParticles();
+
+// --- Game Logic ---
+
 function handleMatch(block1, block2) {
-    score += 100;
+    playSound('SE_MATCH');
+
+    // Visual Effects: Particles
+    const rect1 = block1.getBoundingClientRect();
+    const rect2 = block2.getBoundingClientRect();
+    createExplosion(rect1.left + rect1.width / 2, rect1.top + rect1.height / 2, '#f5a623'); // Gold
+    createExplosion(rect2.left + rect2.width / 2, rect2.top + rect2.height / 2, '#4ecdc4'); // Teal
+
+    // Return: Reward
+    timeLeft += CONFIG.GAME.REWARD_TIME;
+    updateTimerDisplay();
+
+    // Combo System
+    const now = Date.now();
+    if (now - lastMatchTime < CONFIG.GAME.COMBO_WINDOW) {
+        comboCount++;
+    } else {
+        comboCount = 0;
+    }
+    lastMatchTime = now;
+
+    // Calculate Score
+    const multiplier = CONFIG.GAME.COMBO_MULTIPLIER[Math.min(comboCount, CONFIG.GAME.COMBO_MULTIPLIER.length - 1)];
+    const points = Math.floor(CONFIG.GAME.SCORE_MATCH * multiplier);
+    score += points;
+
     scoreDisplay.textContent = score;
+
+    // Show Combo UI (Simple console log for now, can be improved)
+    if (comboCount > 0) {
+        console.log(`Combo x${multiplier}!`);
+        // TODO: Add visual popup for combo
+    }
 
     block1.classList.add('matched');
     block2.classList.add('matched');
@@ -393,6 +635,20 @@ function handleMatch(block1, block2) {
         if (document.querySelectorAll('.block:not(.matched)').length === 0) {
             levelClear();
         }
+    }, CONFIG.UI.MATCH_DELAY);
+}
+
+function updateTimerDisplay() {
+    timerDisplay.textContent = Math.max(0, timeLeft);
+}
+
+function triggerVisualPenalty() {
+    console.log("Visual Penalty Triggered");
+    gameContainer.classList.remove('shake-screen'); // Reset if already active
+    void gameContainer.offsetWidth; // Trigger reflow to restart animation
+    gameContainer.classList.add('shake-screen');
+    setTimeout(() => {
+        gameContainer.classList.remove('shake-screen');
     }, 500);
 }
 
@@ -405,9 +661,13 @@ function levelClear() {
                 'level_name': currentLevel
             });
         }
-        alert(`Level ${currentLevel} Clear! Next Level...`);
-        currentLevel++;
-        startLevel();
+        playSound('SE_CLEAR');
+
+        // Small delay before next level
+        setTimeout(() => {
+            currentLevel++;
+            startLevel();
+        }, 1000);
     } else {
         endGame();
     }
