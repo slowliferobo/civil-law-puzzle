@@ -67,7 +67,12 @@ function startLevel() {
     timerDisplay.textContent = timeLeft;
 
     showScreen(gameScreen);
-    generateBlocks(pairsCount);
+
+    // Small delay to ensure layout is applied and dimensions are correct
+    // This fixes the issue where blocks might not appear on some devices
+    setTimeout(() => {
+        generateBlocks(pairsCount);
+    }, 100);
 
     clearInterval(timerInterval);
     timerInterval = setInterval(updateTimer, 1000);
@@ -115,6 +120,73 @@ function createBlock(text, type, id) {
     block.dataset.type = type;
 
     // Append first to get dimensions
+    playArea.appendChild(block);
+    activeBlocks.push(block);
+
+    // Random position with better distribution
+    const padding = 20; // Reduced padding
+    const headerHeight = 60; // Reduced header height assumption
+
+    // Get dimensions with fallback
+    const blockWidth = block.offsetWidth || 150;
+    const blockHeight = block.offsetHeight || 60;
+
+    // Ensure we have valid ranges even on small screens
+    const maxX = Math.max(padding, window.innerWidth - blockWidth - padding);
+    const maxY = Math.max(headerHeight + padding, window.innerHeight - blockHeight - padding);
+    const minY = headerHeight + padding;
+
+    // If screen is too small, maxY might be less than minY. Handle this.
+    const safeMaxY = Math.max(minY, maxY);
+
+    let x, y;
+    let overlap = false;
+    let attempts = 0;
+    const maxAttempts = 50;
+
+    do {
+        overlap = false;
+        x = Math.random() * (maxX - padding) + padding;
+        y = Math.random() * (safeMaxY - minY) + minY;
+
+        // Check collision with existing active blocks
+        const newRect = {
+            left: x,
+            right: x + blockWidth,
+            top: y,
+            bottom: y + blockHeight
+        };
+
+        for (const otherBlock of activeBlocks) {
+            if (otherBlock === block) continue; // Skip self
+
+            const otherRect = otherBlock.getBoundingClientRect();
+            // If otherBlock has 0 dims, use fallback for it too (approximation)
+            const otherW = otherRect.width || 150;
+            const otherH = otherRect.height || 60;
+
+            // Add some margin to the check to ensure they are not touching
+            const margin = 10;
+            const expandedOtherRect = {
+                left: (otherRect.left || 0) - margin,
+                right: (otherRect.left || 0) + otherW + margin,
+                top: (otherRect.top || 0) - margin,
+                bottom: (otherRect.top || 0) + otherH + margin
+            };
+
+            if (isOverlapping(newRect, expandedOtherRect)) {
+                overlap = true;
+                break;
+            }
+        }
+        attempts++;
+    } while (overlap && attempts < maxAttempts);
+
+    block.style.left = `${x}px`;
+    block.style.top = `${y}px`;
+
+    makeDraggable(block);
+
     // Click to match logic
     block.addEventListener('click', (e) => {
         // Prevent click if it was a drag
