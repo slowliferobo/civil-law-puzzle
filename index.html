@@ -4,27 +4,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </div>
-    <button id="start-btn" class="btn primary">スタート</button>
-    </div>
+    <title>民法マスター：条文パズル</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+</head>
 
-    <div id="game-screen" class="screen">
-        <div id="hud">
-            <div id="score-container">Score: <span id="score">0</span></div>
-            <div id="timer-container">Time: <span id="timer">60</span></div>
+<body>
+    <div id="game-container">
+        <div id="rotate-message">
+            <p>画面を横にして遊んでください</p>
         </div>
-        <div id="play-area">
-            <!-- Blocks will be generated here -->
+        <div id="title-screen" class="screen active">
+            <h1>民法マスター<br><span class="subtitle">条文パズル</span></h1>
+            <div class="instructions">
+                <p>【遊び方】</p>
+                <p>用語と定義のペアをマッチさせよう！</p>
+                <p>ドラッグ＆ドロップ または クリックで選択</p>
+            </div>
+            <button id="start-btn" class="btn primary">スタート</button>
         </div>
-    </div>
 
-    <div id="result-screen" class="screen">
-        <h2>終了！</h2>
-        <p>あなたのスコア: <span id="final-score">0</span></p>
-        <button id="retry-btn" class="btn secondary">もう一度</button>
-    </div>
+        <div id="game-screen" class="screen">
+            <div id="hud">
+                <div id="score-container">Score: <span id="score">0</span></div>
+                <div id="timer-container">Time: <span id="timer">60</span></div>
+            </div>
+            <div id="play-area">
+                <!-- Blocks will be generated here -->
+            </div>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <h2>終了！</h2>
+            <p>あなたのスコア: <span id="final-score">0</span></p>
+            <button id="retry-btn" class="btn secondary">もう一度</button>
+        </div>
     </div>
     <script src="script.js"></script>
-    </body>
+</body>
 
 </html>
