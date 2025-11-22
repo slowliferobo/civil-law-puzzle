@@ -50,6 +50,11 @@ function startGame() {
     score = 0;
     currentLevel = 1;
     startLevel();
+
+    // Track game start
+    if (typeof gtag === 'function') {
+        gtag('event', 'game_start');
+    }
 }
 
 function startLevel() {
@@ -79,6 +84,13 @@ function startLevel() {
         });
     });
 
+    // Track level start
+    if (typeof gtag === 'function') {
+        gtag('event', 'level_start', {
+            'level_name': currentLevel
+        });
+    }
+
     clearInterval(timerInterval);
     timerInterval = setInterval(updateTimer, 1000);
 }
@@ -100,6 +112,14 @@ function endGame() {
     clearInterval(timerInterval);
     finalScoreDisplay.textContent = score;
     showScreen(resultScreen);
+
+    // Track game completion
+    if (typeof gtag === 'function') {
+        gtag('event', 'game_complete', {
+            'score': score,
+            'level_reached': currentLevel
+        });
+    }
 }
 
 function generateBlocks(count) {
@@ -379,6 +399,12 @@ function handleMatch(block1, block2) {
 function levelClear() {
     clearInterval(timerInterval);
     if (currentLevel < maxLevels) {
+        // Track level clear
+        if (typeof gtag === 'function') {
+            gtag('event', 'level_clear', {
+                'level_name': currentLevel
+            });
+        }
         alert(`Level ${currentLevel} Clear! Next Level...`);
         currentLevel++;
         startLevel();
