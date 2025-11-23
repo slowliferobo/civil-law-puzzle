@@ -1,5 +1,5 @@
 # ==========================================
-# WHITELIST-BASED .gitignore
+# WHITELIST-BASED .gitignore TEMPLATE
 # ==========================================
 # DO NOT MODIFY THIS FILE WITHOUT CAREFUL CONSIDERATION
 # This uses a whitelist approach to prevent accidental uploads
@@ -27,6 +27,12 @@
 # Whitelist: This file itself
 !.gitignore
 
-# Whitelist: Template for future projects
-!.gitignore_template
-
+# ==========================================
+# INSTRUCTIONS FOR USE:
+# ==========================================
+# 1. Copy this file to your new project directory
+# 2. Rename it to '.gitignore'
+# 3. Add any additional files you want to track to the whitelist
+#    Example: !config.json
+# 4. Remove this instruction block before committing
+# ==========================================
